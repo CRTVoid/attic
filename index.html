@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Pinterest галерея</title>
+    <title>Patchwork</title></title>
     <style>
         /* ========== ВАШ ОРИГИНАЛЬНЫЙ CSS ========== */
         * {
@@ -871,7 +871,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Моя Pinterest галерея</h1>
+        <h1>Patchwork</h1>
     </div>
 
     <!-- Кнопки досок + меню -->
@@ -1110,16 +1110,16 @@
             dropdown.className = 'dropdown-menu';
             dropdown.innerHTML = `
                 <div class="dropdown-content" id="dropdownContent">
-                    <div class="menu-item" onclick="toggleCreateBoardForm()">➕ Создать новую доску</div>
-                    <div class="menu-item" onclick="toggleUploadForm()">📤 Загрузить изображения</div>
-                    <div class="menu-item" onclick="enterDeleteMode()">🗑 Удалить изображения</div>
+                    <div class="menu-item" onclick="toggleCreateBoardForm()">Создать новую доску</div>
+                    <div class="menu-item" onclick="toggleUploadForm()">Загрузить изображения</div>
+                    <div class="menu-item" onclick="enterDeleteMode()">Удалить изображения</div>
                     <div class="menu-divider"></div>
                     <div class="menu-item dark-mode-toggle" onclick="toggleDarkMode()">
-                        <span>🌓 Ночной режим</span>
+                        <span>Ночной режим</span>
                         <div class="theme-toggle-switch"></div>
                     </div>
                     <div class="menu-divider"></div>
-                    <div class="menu-item delete" onclick="showDeleteBoardModal()">❌ Удалить доску</div>
+                    <div class="menu-item delete" onclick="showDeleteBoardModal()">Удалить доску</div>
                 </div>
             `;
             container.appendChild(dropdown);
