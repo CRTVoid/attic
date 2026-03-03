@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Pinterest галерея</title>
     <style>
+        /* Все стили точно такие же, как в предыдущей версии */
         * {
             margin: 0;
             padding: 0;
@@ -924,30 +925,30 @@
         let darkMode = localStorage.getItem('darkMode') === 'true';
 
         // ==============================================
-        // ЗАГРУЗКА НА FREEIMAGE.HOST (БЕЗ КЛЮЧЕЙ)
+        // ЗАГРУЗКА НА POSTIMAGES (РАБОТАЕТ В РОССИИ)
         // ==============================================
 
-        async function uploadToFreeImage(file) {
+        async function uploadToPostImages(file) {
             const formData = new FormData();
-            formData.append('source', file); // FreeImage.Host использует 'source'
-            formData.append('type', 'file');
+            formData.append('file', file); // PostImages использует 'file'
+            formData.append('upload', '1'); // Флаг загрузки
 
-            const response = await fetch('https://freeimage.host/api/1/upload', {
+            const response = await fetch('https://postimages.org/json/rr', {
                 method: 'POST',
                 body: formData
             });
 
             if (!response.ok) {
-                throw new Error('Ошибка загрузки на FreeImage.Host');
+                throw new Error('Ошибка загрузки на PostImages');
             }
 
             const data = await response.json();
             
-            // FreeImage.Host возвращает прямую ссылку на изображение
-            return data.image.url; // Прямая ссылка на изображение
+            // PostImages возвращает JSON с прямой ссылкой
+            return data.image.url;
         }
 
-        async function uploadMultipleToFreeImage(files) {
+        async function uploadMultipleToPostImages(files) {
             const uploadButton = document.getElementById('uploadButton');
             const progressDiv = document.getElementById('uploadProgress');
             const progressFill = document.getElementById('progressFill');
@@ -964,7 +965,7 @@
                 try {
                     progressText.textContent = `Загрузка... ${Math.round((completed / files.length) * 100)}%`;
                     
-                    const imageUrl = await uploadToFreeImage(file);
+                    const imageUrl = await uploadToPostImages(file);
                     
                     uploadedImages.push({
                         src: imageUrl,
@@ -1302,7 +1303,7 @@
             const files = document.getElementById('imageUpload').files;
             if (files.length === 0) return;
 
-            await uploadMultipleToFreeImage(Array.from(files));
+            await uploadMultipleToPostImages(Array.from(files));
         });
 
         function renderGallery() {
