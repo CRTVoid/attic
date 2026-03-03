@@ -977,40 +977,12 @@
         
         // ========== ИНТЕГРАЦИЯ С ЯНДЕКС.ДИСК ==========
         const YANDEX_TOKEN = 'y0__xDgvdT3ARjHvD4gvvb5zhYu5mVVce8DtDhJj1_lg-nhuOrWxw';
-        const CONFIG_FILE = 'disk:/gallery/boards.json'; // Путь к файлу с досками
-
-        // Функция создания папки gallery (если её нет)
-        async function createGalleryFolder() {
-            try {
-                // Проверяем, существует ли папка
-                const checkResponse = await fetch(
-                    `https://cloud-api.yandex.net/v1/disk/resources?path=disk:/gallery`,
-                    {
-                        headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
-                    }
-                );
-                
-                // Если папки нет (404), создаём её
-                if (checkResponse.status === 404) {
-                    await fetch(
-                        `https://cloud-api.yandex.net/v1/disk/resources?path=disk:/gallery`,
-                        {
-                            method: 'PUT',
-                            headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
-                        }
-                    );
-                    console.log('📁 Папка gallery создана');
-                }
-            } catch (error) {
-                console.error('Ошибка при создании папки:', error);
-            }
-        }
-
+        const CONFIG_FILE = 'disk:/gallery/boards.json';
+        
         // Функция загрузки данных на Яндекс.Диск
         async function uploadToYandexDisk(data) {
             try {
-                // Сначала создаём папку, если её нет
-                await createGalleryFolder();
+                console.log('🔄 Сохраняем данные на Яндекс.Диск...');
                 
                 // Получаем ссылку для загрузки
                 const uploadUrlResponse = await fetch(
@@ -1050,6 +1022,8 @@
         // Функция загрузки данных с Яндекс.Диска
         async function downloadFromYandexDisk() {
             try {
+                console.log('🔄 Загружаем данные с Яндекс.Диска...');
+                
                 // Получаем ссылку для скачивания
                 const downloadUrlResponse = await fetch(
                     `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(CONFIG_FILE)}`,
@@ -1078,7 +1052,17 @@
                     return null;
                 }
                 
-                return await response.json();
+                // Получаем текст ответа
+                const text = await response.text();
+                
+                // Если файл пустой, возвращаем null
+                if (!text || text.trim() === '') {
+                    console.log('📄 Файл boards.json пустой');
+                    return null;
+                }
+                
+                // Парсим JSON
+                return JSON.parse(text);
             } catch (error) {
                 console.error('❌ Ошибка загрузки с Яндекс.Диска:', error);
                 return null;
@@ -1207,6 +1191,8 @@
             uploadToYandexDisk(dataToSave).then(success => {
                 if (success) {
                     showStatus('💾 Синхронизация с Яндекс.Диском выполнена', 'success');
+                } else {
+                    showStatus('❌ Ошибка синхронизации с Яндекс.Диском', 'error');
                 }
             });
         }
