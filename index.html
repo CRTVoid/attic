@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Pinterest галерея</title>
     <style>
-        /* Все стили точно такие же */
         * {
             margin: 0;
             padding: 0;
@@ -909,7 +908,7 @@
 
     <script>
         // ==============================================
-        // НАСТРОЙКИ
+        // НАСТРОЙКИ - УБРАЛ ВСЕ ССЫЛКИ НА ЯНДЕКС.ДИСК
         // ==============================================
         
         let boards = JSON.parse(localStorage.getItem('boards')) || {
@@ -927,25 +926,37 @@
         // ЗАГРУЗКА ЧЕРЕЗ ПРОКСИ (РАБОТАЕТ ВСЕГДА)
         // ==============================================
 
-        async function uploadToImageBam(file) {
+        async function uploadToImageHosting(file) {
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('source', file);
+            formData.append('type', 'file');
 
-            // Используем CORS-прокси для обхода блокировок
-            const proxyUrl = 'https://api.allorigins.win/raw?url=';
-            const targetUrl = 'https://www.imagebam.com/api/upload';
+            // Пробуем разные прокси
+            const proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?',
+                'https://cors-anywhere.herokuapp.com/'
+            ];
             
-            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-                method: 'POST',
-                body: formData
-            });
+            const targetUrl = 'https://freeimage.host/api/1/upload';
+            
+            for (const proxy of proxies) {
+                try {
+                    const response = await fetch(proxy + encodeURIComponent(targetUrl), {
+                        method: 'POST',
+                        body: formData
+                    });
 
-            if (!response.ok) {
-                throw new Error(`Ошибка загрузки: ${response.status}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.image.url;
+                    }
+                } catch (e) {
+                    console.log('Прокси не сработал:', proxy);
+                }
             }
-
-            const data = await response.json();
-            return data.file.url;
+            
+            throw new Error('Все прокси недоступны');
         }
 
         async function uploadMultipleToImageHosting(files) {
@@ -965,7 +976,7 @@
                 try {
                     progressText.textContent = `Загрузка... ${Math.round((completed / files.length) * 100)}%`;
                     
-                    const imageUrl = await uploadToImageBam(file);
+                    const imageUrl = await uploadToImageHosting(file);
                     
                     uploadedImages.push({
                         src: imageUrl,
@@ -1010,7 +1021,7 @@
         }
 
         // ==============================================
-        // ОСНОВНЫЕ ФУНКЦИИ
+        // ОСНОВНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
         // ==============================================
 
         function applyTheme() {
