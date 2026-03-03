@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>SnapBoard</title>
+    <title>Pinterest галерея</title>
     <style>
         /* ========== ТВОЙ ОРИГИНАЛЬНЫЙ CSS ========== */
         * {
@@ -118,7 +118,7 @@
         }
 
         .board-btn.protected::after {
-            content: "🔒";
+            content: "";
             position: absolute;
             right: 10px;
             top: 50%;
@@ -875,7 +875,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>SnapBoard</h1>
+        <h1>Моя Pinterest галерея</h1>
     </div>
 
     <!-- Кнопки досок + меню -->
@@ -1013,7 +1013,7 @@
         // Загрузка всех досок из Firestore
         async function loadBoardsFromFirebase() {
             try {
-                console.log('🔄 Загружаем доски из Firebase...');
+                console.log('Загружаем доски из Firebase...');
                 const snapshot = await db.collection('boards').get();
                 
                 const loadedBoards = {};
