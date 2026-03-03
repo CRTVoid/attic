@@ -118,7 +118,7 @@
         }
 
         .board-btn.protected::after {
-            content: "";
+            content: "🔒";
             position: absolute;
             right: 10px;
             top: 50%;
@@ -1013,7 +1013,7 @@
         // Загрузка всех досок из Firestore
         async function loadBoardsFromFirebase() {
             try {
-                console.log('Загружаем доски из Firebase...');
+                console.log('🔄 Загружаем доски из Firebase...');
                 const snapshot = await db.collection('boards').get();
                 
                 const loadedBoards = {};
@@ -1023,14 +1023,14 @@
                 
                 if (Object.keys(loadedBoards).length > 0) {
                     boards = loadedBoards;
-                    console.log('Доски загружены из Firebase');
+                    console.log('✅ Доски загружены из Firebase');
                     return true;
                 } else {
-                    console.log('В Firebase пока нет досок');
+                    console.log('📄 В Firebase пока нет досок');
                     return false;
                 }
             } catch (error) {
-                console.error('Ошибка загрузки из Firebase:', error);
+                console.error('❌ Ошибка загрузки из Firebase:', error);
                 return false;
             }
         }
@@ -1038,7 +1038,7 @@
         // Сохранение всех досок в Firestore
         async function saveBoardsToFirebase() {
             try {
-                console.log('Сохраняем доски в Firebase...');
+                console.log('🔄 Сохраняем доски в Firebase...');
                 
                 // Создаём batch для атомарной записи
                 const batch = db.batch();
@@ -1060,10 +1060,10 @@
                 // Выполняем batch
                 await batch.commit();
                 
-                console.log('Доски сохранены в Firebase');
+                console.log('✅ Доски сохранены в Firebase');
                 return true;
             } catch (error) {
-                console.error('Ошибка сохранения в Firebase:', error);
+                console.error('❌ Ошибка сохранения в Firebase:', error);
                 return false;
             }
         }
@@ -1095,9 +1095,9 @@
             // Сохраняем в Firebase в фоне
             saveBoardsToFirebase().then(success => {
                 if (success) {
-                    showStatus('Синхронизация с Firebase выполнена', 'success');
+                    showStatus('💾 Синхронизация с Firebase выполнена', 'success');
                 } else {
-                    showStatus('Ошибка синхронизации с Firebase', 'error');
+                    showStatus('❌ Ошибка синхронизации с Firebase', 'error');
                 }
             });
         }
@@ -1165,22 +1165,22 @@
 
         // Функция ручной синхронизации с Firebase
         async function syncWithFirebase() {
-            showStatus('Синхронизация с Firebase...', 'loading');
+            showStatus('🔄 Синхронизация с Firebase...', 'loading');
             await saveToStorage();
         }
 
         // Функция принудительной загрузки из Firebase
         async function forceLoadFromFirebase() {
-            showStatus('Загрузка из Firebase...', 'loading');
+            showStatus('🔄 Загрузка из Firebase...', 'loading');
             const loaded = await loadBoardsFromFirebase();
             
             if (loaded) {
                 localStorage.setItem('boards', JSON.stringify(boards));
                 renderBoards();
                 renderGallery();
-                showStatus('Данные загружены из Firebase', 'success');
+                showStatus('✅ Данные загружены из Firebase', 'success');
             } else {
-                showStatus('Не удалось загрузить данные из Firebase', 'error');
+                showStatus('❌ Не удалось загрузить данные из Firebase', 'error');
             }
         }
 
@@ -1191,7 +1191,7 @@
                 'Вы уверены, что хотите очистить localStorage? Это удалит все локальные данные, но данные в Firebase сохранятся. После очистки страница перезагрузится.',
                 () => {
                     localStorage.clear();
-                    showStatus('localStorage очищен, перезагрузка...', 'success');
+                    showStatus('✅ localStorage очищен, перезагрузка...', 'success');
                     setTimeout(() => {
                         location.reload();
                     }, 1500);
@@ -1247,20 +1247,20 @@
             dropdown.className = 'dropdown-menu';
             dropdown.innerHTML = `
                 <div class="dropdown-content" id="dropdownContent">
-                    <div class="menu-item" onclick="toggleCreateBoardForm()">Создать новую доску</div>
-                    <div class="menu-item" onclick="toggleUploadForm()">Загрузить изображения</div>
-                    <div class="menu-item" onclick="enterDeleteMode()">Удалить изображения</div>
+                    <div class="menu-item" onclick="toggleCreateBoardForm()">➕ Создать новую доску</div>
+                    <div class="menu-item" onclick="toggleUploadForm()">📤 Загрузить изображения</div>
+                    <div class="menu-item" onclick="enterDeleteMode()">🗑 Удалить изображения</div>
                     <div class="menu-divider"></div>
-                    <div class="menu-item" onclick="syncWithFirebase()">Синхронизировать с Firebase</div>
-                    <div class="menu-item" onclick="forceLoadFromFirebase()">Загрузить из Firebase</div>
-                    <div class="menu-item" onclick="clearLocalStorage()">Очистить localStorage</div>
+                    <div class="menu-item" onclick="syncWithFirebase()">☁️ Синхронизировать с Firebase</div>
+                    <div class="menu-item" onclick="forceLoadFromFirebase()">📥 Загрузить из Firebase</div>
+                    <div class="menu-item" onclick="clearLocalStorage()">🧹 Очистить localStorage</div>
                     <div class="menu-divider"></div>
                     <div class="menu-item dark-mode-toggle" onclick="toggleDarkMode()">
-                        <span>Ночной режим</span>
+                        <span>🌓 Ночной режим</span>
                         <div class="theme-toggle-switch"></div>
                     </div>
                     <div class="menu-divider"></div>
-                    <div class="menu-item delete" onclick="showDeleteBoardModal()">Удалить доску</div>
+                    <div class="menu-item delete" onclick="showDeleteBoardModal()">❌ Удалить доску</div>
                 </div>
             `;
             container.appendChild(dropdown);
@@ -1557,17 +1557,17 @@
             if (successCount > 0) {
                 if (errorCount === 0) {
                     uploadStatus.className = 'upload-status success';
-                    uploadStatus.textContent = `Успешно загружено ${successCount} изображений!`;
+                    uploadStatus.textContent = `✅ Успешно загружено ${successCount} изображений!`;
                 } else {
                     uploadStatus.className = 'upload-status success';
-                    uploadStatus.textContent = `Загружено ${successCount}, ошибок: ${errorCount}`;
+                    uploadStatus.textContent = `✅ Загружено ${successCount}, ошибок: ${errorCount}`;
                 }
                 
                 // Обновляем галерею
                 renderGallery();
             } else {
                 uploadStatus.className = 'upload-status error';
-                uploadStatus.textContent = `Не удалось загрузить изображения`;
+                uploadStatus.textContent = `❌ Не удалось загрузить изображения`;
             }
             
             // Очищаем форму
