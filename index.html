@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Patchwork</title></title>
+    <title>Pinterest галерея</title>
     <style>
         /* ========== ВАШ ОРИГИНАЛЬНЫЙ CSS ========== */
         * {
@@ -871,7 +871,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Patchwork</h1>
+        <h1>Моя Pinterest галерея</h1>
     </div>
 
     <!-- Кнопки досок + меню -->
@@ -975,10 +975,118 @@
         // ========== ВАШ SECRET_KEY для ImageBan ==========
         const SECRET_KEY = 'hELToqDFVXZDYjJgKH77sumGkQmPvn89w1F';
         
+        // ========== ИНТЕГРАЦИЯ С ЯНДЕКС.ДИСК ==========
+        const YANDEX_TOKEN = 'y0__xDgvdT3ARjHvD4gvvb5zhYu5mVVce8DtDhJj1_lg-nhuOrWxw';
+        const CONFIG_FILE = 'disk:/gallery/boards.json'; // Путь к файлу с досками
+
+        // Функция создания папки gallery (если её нет)
+        async function createGalleryFolder() {
+            try {
+                // Проверяем, существует ли папка
+                const checkResponse = await fetch(
+                    `https://cloud-api.yandex.net/v1/disk/resources?path=disk:/gallery`,
+                    {
+                        headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
+                    }
+                );
+                
+                // Если папки нет (404), создаём её
+                if (checkResponse.status === 404) {
+                    await fetch(
+                        `https://cloud-api.yandex.net/v1/disk/resources?path=disk:/gallery`,
+                        {
+                            method: 'PUT',
+                            headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
+                        }
+                    );
+                    console.log('📁 Папка gallery создана');
+                }
+            } catch (error) {
+                console.error('Ошибка при создании папки:', error);
+            }
+        }
+
+        // Функция загрузки данных на Яндекс.Диск
+        async function uploadToYandexDisk(data) {
+            try {
+                // Сначала создаём папку, если её нет
+                await createGalleryFolder();
+                
+                // Получаем ссылку для загрузки
+                const uploadUrlResponse = await fetch(
+                    `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(CONFIG_FILE)}&overwrite=true`,
+                    {
+                        headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
+                    }
+                );
+                
+                if (!uploadUrlResponse.ok) {
+                    console.error('Ошибка получения ссылки для загрузки:', await uploadUrlResponse.text());
+                    return false;
+                }
+                
+                const { href } = await uploadUrlResponse.json();
+                
+                // Загружаем данные по полученной ссылке
+                const uploadResponse = await fetch(href, {
+                    method: 'PUT',
+                    body: JSON.stringify(data, null, 2),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!uploadResponse.ok) {
+                    console.error('Ошибка загрузки данных:', await uploadResponse.text());
+                    return false;
+                }
+                
+                console.log('✅ Данные сохранены на Яндекс.Диск');
+                return true;
+            } catch (error) {
+                console.error('❌ Ошибка сохранения на Яндекс.Диск:', error);
+                return false;
+            }
+        }
+
+        // Функция загрузки данных с Яндекс.Диска
+        async function downloadFromYandexDisk() {
+            try {
+                // Получаем ссылку для скачивания
+                const downloadUrlResponse = await fetch(
+                    `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(CONFIG_FILE)}`,
+                    {
+                        headers: { 'Authorization': `OAuth ${YANDEX_TOKEN}` }
+                    }
+                );
+                
+                // Если файл не существует, возвращаем null
+                if (downloadUrlResponse.status === 404) {
+                    console.log('📄 Файл boards.json ещё не создан');
+                    return null;
+                }
+                
+                if (!downloadUrlResponse.ok) {
+                    console.error('Ошибка получения ссылки для скачивания:', await downloadUrlResponse.text());
+                    return null;
+                }
+                
+                const { href } = await downloadUrlResponse.json();
+                
+                // Скачиваем данные
+                const response = await fetch(href);
+                if (!response.ok) {
+                    console.error('Ошибка скачивания данных:', await response.text());
+                    return null;
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('❌ Ошибка загрузки с Яндекс.Диска:', error);
+                return null;
+            }
+        }
+        
         // Состояние приложения
-        let boards = JSON.parse(localStorage.getItem('boards')) || {
-            'Основная': { password: null, images: [] }
-        };
+        let boards = {};
         let currentBoard = 'Основная';
         let pendingBoardAccess = null;
         let selectedImages = new Set();
@@ -991,7 +1099,31 @@
         let darkMode = localStorage.getItem('darkMode') === 'true';
 
         // Инициализация
-        function init() {
+        async function init() {
+            // Сначала пробуем загрузить с Яндекс.Диска
+            const yandexData = await downloadFromYandexDisk();
+            
+            if (yandexData) {
+                // Применяем загруженные данные
+                if (yandexData.boards) boards = yandexData.boards;
+                if (yandexData.gridSettings) gridSettings = yandexData.gridSettings;
+                if (yandexData.darkMode !== undefined) {
+                    darkMode = yandexData.darkMode;
+                }
+                
+                // Сохраняем в localStorage для офлайн-доступа
+                localStorage.setItem('boards', JSON.stringify(boards));
+                localStorage.setItem('gridSettings', JSON.stringify(gridSettings));
+                localStorage.setItem('darkMode', darkMode);
+                
+                showStatus('✅ Данные загружены с Яндекс.Диска', 'success');
+            } else {
+                // Если на диске нет данных, используем localStorage
+                boards = JSON.parse(localStorage.getItem('boards')) || {
+                    'Основная': { password: null, images: [] }
+                };
+            }
+            
             applyTheme();
             applyGridSettingsFromStorage();
             renderBoards();
@@ -1012,6 +1144,7 @@
             darkMode = !darkMode;
             localStorage.setItem('darkMode', darkMode);
             applyTheme();
+            saveToStorage(); // Сохраняем на Яндекс.Диск
             renderBoards();
         }
 
@@ -1028,6 +1161,7 @@
             localStorage.setItem('gridSettings', JSON.stringify(gridSettings));
             const gallery = document.getElementById('gallery');
             gallery.setAttribute('data-columns', gridSettings.columns);
+            saveToStorage(); // Сохраняем на Яндекс.Диск
         }
 
         // Открытие модального окна настройки сетки
@@ -1057,9 +1191,70 @@
             document.getElementById('gridValue').textContent = e.target.value;
         });
 
-        // Сохранение в localStorage
-        function saveToStorage() {
+        // Сохранение в localStorage и синхронизация с Яндекс.Диском
+        async function saveToStorage() {
             localStorage.setItem('boards', JSON.stringify(boards));
+            
+            // Сохраняем на Яндекс.Диск в фоне
+            const dataToSave = {
+                boards: boards,
+                gridSettings: gridSettings,
+                darkMode: darkMode,
+                lastSync: new Date().toISOString()
+            };
+            
+            // Не ждём завершения, чтобы не тормозить интерфейс
+            uploadToYandexDisk(dataToSave).then(success => {
+                if (success) {
+                    showStatus('💾 Синхронизация с Яндекс.Диском выполнена', 'success');
+                }
+            });
+        }
+
+        // Функция ручной синхронизации
+        async function syncWithYandexDisk() {
+            showStatus('🔄 Синхронизация с Яндекс.Диском...', 'loading');
+            await saveToStorage();
+        }
+
+        // Функция принудительной загрузки с диска
+        async function forceLoadFromDisk() {
+            showStatus('🔄 Загрузка с Яндекс.Диска...', 'loading');
+            const yandexData = await downloadFromYandexDisk();
+            
+            if (yandexData) {
+                if (yandexData.boards) boards = yandexData.boards;
+                if (yandexData.gridSettings) gridSettings = yandexData.gridSettings;
+                if (yandexData.darkMode !== undefined) {
+                    darkMode = yandexData.darkMode;
+                    applyTheme();
+                }
+                
+                localStorage.setItem('boards', JSON.stringify(boards));
+                localStorage.setItem('gridSettings', JSON.stringify(gridSettings));
+                localStorage.setItem('darkMode', darkMode);
+                
+                renderBoards();
+                renderGallery();
+                showStatus('✅ Данные загружены с Яндекс.Диска', 'success');
+            } else {
+                showStatus('❌ Не удалось загрузить данные с Яндекс.Диска', 'error');
+            }
+        }
+
+        // Функция очистки localStorage
+        function clearLocalStorage() {
+            showConfirmDialog(
+                'Очистка localStorage',
+                'Вы уверены, что хотите очистить localStorage? Это удалит все локальные данные, но данные на Яндекс.Диске сохранятся. После очистки страница перезагрузится.',
+                () => {
+                    localStorage.clear();
+                    showStatus('✅ localStorage очищен, перезагрузка...', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                }
+            );
         }
 
         // Отображение кнопок досок
@@ -1110,16 +1305,20 @@
             dropdown.className = 'dropdown-menu';
             dropdown.innerHTML = `
                 <div class="dropdown-content" id="dropdownContent">
-                    <div class="menu-item" onclick="toggleCreateBoardForm()">Создать новую доску</div>
-                    <div class="menu-item" onclick="toggleUploadForm()">Загрузить изображения</div>
-                    <div class="menu-item" onclick="enterDeleteMode()">Удалить изображения</div>
+                    <div class="menu-item" onclick="toggleCreateBoardForm()">➕ Создать новую доску</div>
+                    <div class="menu-item" onclick="toggleUploadForm()">📤 Загрузить изображения</div>
+                    <div class="menu-item" onclick="enterDeleteMode()">🗑 Удалить изображения</div>
+                    <div class="menu-divider"></div>
+                    <div class="menu-item" onclick="syncWithYandexDisk()">☁️ Синхронизировать с Яндекс.Диском</div>
+                    <div class="menu-item" onclick="forceLoadFromDisk()">📥 Загрузить с диска</div>
+                    <div class="menu-item" onclick="clearLocalStorage()">🧹 Очистить localStorage</div>
                     <div class="menu-divider"></div>
                     <div class="menu-item dark-mode-toggle" onclick="toggleDarkMode()">
-                        <span>Ночной режим</span>
+                        <span>🌓 Ночной режим</span>
                         <div class="theme-toggle-switch"></div>
                     </div>
                     <div class="menu-divider"></div>
-                    <div class="menu-item delete" onclick="showDeleteBoardModal()">Удалить доску</div>
+                    <div class="menu-item delete" onclick="showDeleteBoardModal()">❌ Удалить доску</div>
                 </div>
             `;
             container.appendChild(dropdown);
@@ -1314,7 +1513,7 @@
             renderGallery();
         }
 
-                // ========== ИНТЕГРАЦИЯ С ImageBan ==========
+        // ========== ИНТЕГРАЦИЯ С ImageBan ==========
         
         // Загрузка изображений на ImageBan
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
@@ -1596,6 +1795,24 @@
 
         function closeModal() {
             document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // Функция отображения статуса (для уведомлений)
+        function showStatus(message, type) {
+            // Создаём временное уведомление
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `upload-status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.margin = '10px 0';
+            statusDiv.style.display = 'block';
+            
+            // Вставляем после формы загрузки
+            const uploadSection = document.getElementById('uploadSection');
+            uploadSection.parentNode.insertBefore(statusDiv, uploadSection.nextSibling);
+            
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 3000);
         }
 
         // Закрытие по Escape
