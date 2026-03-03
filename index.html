@@ -1100,146 +1100,93 @@
         // ==============================================
 
         async function uploadToYandexDisk(file, boardName) {
-            try {
-                // Создаём папку для доски
-                await ensureBoardFolder(boardName);
-                
-                const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                const fileName = `${Date.now()}-${cleanFileName}`;
-                const path = encodeURIComponent(`disk:/${YANDEX_CONFIG.folder}/${boardName}/${fileName}`);
-                
-                // Получаем URL для загрузки
-                const uploadUrlResponse = await fetch(
-                    `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${path}&overwrite=true`,
-                    {
-                        headers: {
-                            'Authorization': `OAuth ${YANDEX_CONFIG.token}`
-                        }
-                    }
-                );
-                
-                if (!uploadUrlResponse.ok) {
-                    const error = await uploadUrlResponse.json();
-                    throw new Error(error.message || 'Не удалось получить URL для загрузки');
+    try {
+        // Создаём папку для доски
+        await ensureBoardFolder(boardName);
+        
+        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileName = `${Date.now()}-${cleanFileName}`;
+        const path = encodeURIComponent(`disk:/${YANDEX_CONFIG.folder}/${boardName}/${fileName}`);
+        
+        // Получаем URL для загрузки
+        const uploadUrlResponse = await fetch(
+            `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${path}&overwrite=true`,
+            {
+                headers: {
+                    'Authorization': `OAuth ${YANDEX_CONFIG.token}`
                 }
-                
-                const { href } = await uploadUrlResponse.json();
-                
-                // Загружаем файл
-                const uploadResponse = await fetch(href, {
-                    method: 'PUT',
-                    body: file,
-                    headers: {
-                        'Content-Type': file.type
-                    }
-                });
-                
-                if (!uploadResponse.ok) {
-                    throw new Error(`Ошибка при загрузке файла: ${uploadResponse.status}`);
-                }
-                
-                // Делаем файл публичным
-                const publishResponse = await fetch(
-                    `https://cloud-api.yandex.net/v1/disk/resources/publish?path=${path}`,
-                    {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `OAuth ${YANDEX_CONFIG.token}`
-                        }
-                    }
-                );
-                
-                if (!publishResponse.ok) {
-                    throw new Error('Не удалось опубликовать файл');
-                }
-                
-                // Получаем публичную ссылку
-                const metaResponse = await fetch(
-                    `https://cloud-api.yandex.net/v1/disk/resources?path=${path}`,
-                    {
-                        headers: {
-                            'Authorization': `OAuth ${YANDEX_CONFIG.token}`
-                        }
-                    }
-                );
-                
-                const meta = await metaResponse.json();
-                const publicUrl = meta.public_url;
-                
-                // ИСПРАВЛЕНИЕ: правильный формат прямой ссылки
-                const fileId = publicUrl.split('/').pop();
-                const directUrl = `https://downloader.disk.yandex.ru/preview/${fileId}`;
-                
-                console.log('✅ Файл загружен:', directUrl);
-                return directUrl;
-                
-            } catch (error) {
-                console.error('Ошибка загрузки:', error);
-                throw error;
             }
+        );
+        
+        if (!uploadUrlResponse.ok) {
+            const error = await uploadUrlResponse.json();
+            throw new Error(error.message || 'Не удалось получить URL для загрузки');
         }
-
-        async function uploadMultipleToYandex(files) {
-            const uploadButton = document.getElementById('uploadButton');
-            const progressDiv = document.getElementById('uploadProgress');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-
-            uploadButton.disabled = true;
-            progressDiv.style.display = 'block';
-
-            const uploadedImages = [];
-            let completed = 0;
-            let errors = [];
-
-            for (const file of files) {
-                try {
-                    progressText.textContent = `Загрузка... ${Math.round((completed / files.length) * 100)}%`;
-                    
-                    const imageUrl = await uploadToYandexDisk(file, currentBoard);
-                    
-                    uploadedImages.push({
-                        src: imageUrl,
-                        name: file.name,
-                        date: new Date().toISOString(),
-                        id: Date.now() + Math.random() + file.name
-                    });
-
-                    completed++;
-                    const percent = (completed / files.length) * 100;
-                    progressFill.style.width = `${percent}%`;
-                    progressText.textContent = `Загрузка... ${Math.round(percent)}%`;
-
-                } catch (error) {
-                    errors.push(`${file.name}: ${error.message}`);
-                }
+        
+        const { href } = await uploadUrlResponse.json();
+        
+        // Загружаем файл
+        const uploadResponse = await fetch(href, {
+            method: 'PUT',
+            body: file,
+            headers: {
+                'Content-Type': file.type
             }
-
-            if (uploadedImages.length > 0) {
-                if (!boards[currentBoard].images) {
-                    boards[currentBoard].images = [];
-                }
-                
-                boards[currentBoard].images.push(...uploadedImages);
-                await saveBoardsToDisk();  // Сохраняем на Диск
-                saveToStorage();            // Сохраняем в localStorage как кэш
-                renderGallery();
-                
-                let message = `✅ Загружено ${uploadedImages.length} из ${files.length}`;
-                if (errors.length > 0) {
-                    message += `\n\n❌ Ошибки:\n${errors.join('\n')}`;
-                }
-                alert(message);
-            } else {
-                alert('❌ Не удалось загрузить ни одного файла.\n\n' + errors.join('\n'));
-            }
-
-            uploadButton.disabled = false;
-            progressDiv.style.display = 'none';
-            progressFill.style.width = '0%';
-            document.getElementById('imageUpload').value = '';
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error(`Ошибка при загрузке файла: ${uploadResponse.status}`);
         }
-
+        
+        // Делаем файл публичным
+        const publishResponse = await fetch(
+            `https://cloud-api.yandex.net/v1/disk/resources/publish?path=${path}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `OAuth ${YANDEX_CONFIG.token}`
+                }
+            }
+        );
+        
+        if (!publishResponse.ok) {
+            throw new Error('Не удалось опубликовать файл');
+        }
+        
+        // Получаем публичную ссылку
+        const metaResponse = await fetch(
+            `https://cloud-api.yandex.net/v1/disk/resources?path=${path}`,
+            {
+                headers: {
+                    'Authorization': `OAuth ${YANDEX_CONFIG.token}`
+                }
+            }
+        );
+        
+        const meta = await metaResponse.json();
+        const publicUrl = meta.public_url;
+        
+        // ИСПРАВЛЕНИЕ: получаем реальную ссылку на скачивание
+        const downloadUrlResponse = await fetch(
+            `https://cloud-api.yandex.net/v1/disk/resources/download?path=${path}`,
+            {
+                headers: {
+                    'Authorization': `OAuth ${YANDEX_CONFIG.token}`
+                }
+            }
+        );
+        
+        const downloadData = await downloadUrlResponse.json();
+        const directUrl = downloadData.href; // Это временная ссылка на скачивание
+        
+        console.log('✅ Файл загружен, временная ссылка:', directUrl);
+        return directUrl;
+        
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        throw error;
+    }
+}
         // ==============================================
         // ОСНОВНЫЕ ФУНКЦИИ
         // ==============================================
